@@ -20,6 +20,8 @@
  */
 package com.iukonline.amule.ec;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,22 +33,18 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.iukonline.amule.ec.ECCategory;
-import com.iukonline.amule.ec.ECClient;
-import com.iukonline.amule.ec.ECCodes;
-import com.iukonline.amule.ec.ECPartFile;
 import com.iukonline.amule.ec.v204.ECClientV204;
 
 /**
  * @author gvegetti
  *
  */
-public class ECClientCompatTest {
+public class ECClientCompatIT {
 
 
-    protected static String SERVER_HOST = "<TEST SERVER HOST HERE>"
+    protected static String SERVER_HOST = "<TEST SERVER HOST HERE>";
     protected static int SERVER_PORT = 4712;
-    protected static String SERVER_PASSWORD = "<TEST SERVER PASSWORD HERE>"
+    protected static String SERVER_PASSWORD = "<TEST SERVER PASSWORD HERE>";
     protected static ECClient cl = new ECClientV204();
 
     protected static Socket socket;
@@ -176,10 +174,6 @@ public class ECClientCompatTest {
 
         System.out.println("############### GET CATEGORIES");
         ECCategory cat[] = cl.getCategories(ECCodes.EC_DETAIL_FULL);
-        if (cat.length == 0) throw new Exception("Expecting at least one category");
-        for (int i = 0; i < cat.length; i++) {
-            System.out.println(cat[i].toString());
-        }
 
         System.out.println("############### ADD CATEGORY");
         String catName = "TEST-" + System.currentTimeMillis();
@@ -199,12 +193,8 @@ public class ECClientCompatTest {
         cl.deleteCategory(newCat.getId());
 
         cat = cl.getCategories(ECCodes.EC_DETAIL_FULL);
-        for (int i = 0; i < cat.length; i++) {
-            if (cat[i].getTitle().equals(catName)) {
-                throw new Exception("Category " + catName + "not deleted");
-            }
+        if (cat != null) {
+        	assertThat(cat).usingElementComparatorOnFields("title").doesNotContain(cat);
         }
-
-
     }
 }

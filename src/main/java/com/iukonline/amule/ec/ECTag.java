@@ -18,6 +18,7 @@
 package com.iukonline.amule.ec;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.nio.charset.CharacterCodingException;
 import java.util.ArrayList;
@@ -30,33 +31,35 @@ import com.iukonline.amule.ec.exceptions.ECTagParsingException;
 
 
 public class ECTag  {
-    
-    private short       tagName; 
+
+    private short       tagName;
     private byte        tagType = ECTagTypes.EC_TAGTYPE_UNKNOWN;
-    
+
     private int         nestingLevel = 0;
-    
+
     private String            tagValueString;
     private long              tagValueUInt;
-    private InetSocketAddress tagValueIPv4;  
-    private byte[]            tagValueHash;   
+    private BigInteger        tagValueUInt128;
+    private InetSocketAddress tagValueIPv4;
+    private byte[]            tagValueHash;
     private byte[]            tagValueCustom;
     private double            tagValueDouble;
-    
+
     ArrayList<ECTag>    subTags;        // Note: this is not synchronized... Take care if used in multiple thread
-    
+
     ECRawTag rawTag;
-        
+
     public ECTag() {
         subTags = new ArrayList<ECTag>();
     }
-    
+
     public ECTag(ECTag t) {
         tagName = t.tagName;
         tagType = t.tagType;
         nestingLevel = t.nestingLevel;
         tagValueString = t.tagValueString;
         tagValueUInt = t.tagValueUInt;
+        tagValueUInt128 = t.tagValueUInt128;
         if (t.tagValueIPv4 != null) tagValueIPv4 = new InetSocketAddress(t.tagValueIPv4.getAddress(), t.tagValueIPv4.getPort());
         if (t.tagValueHash != null) {
             tagValueHash = new byte[t.tagValueHash.length];
@@ -71,26 +74,26 @@ public class ECTag  {
                 t.addSubTag(new ECTag(sub));
             }
         }
-                        
+
     }
-    
+
 
     public ECTag(short tagName, byte tagType) throws DataFormatException {
         this();
         this.setTagName(tagName);
         this.setTagType(tagType);
     }
-    
+
     public ECTag(short tagName, byte tagType, String tagValue) throws DataFormatException {
         this(tagName, tagType);
         this.setTagValueString(tagValue);
     }
-    
+
     public ECTag(short tagName, byte tagType, long tagValue) throws DataFormatException {
         this(tagName, tagType);
         this.setTagValueUInt(tagValue);
     }
-    
+
     public ECTag(short tagName, String tagValue) throws DataFormatException {
         this(tagName, ECTagTypes.EC_TAGTYPE_STRING, tagValue);
     }
@@ -115,16 +118,16 @@ public class ECTag  {
             break;
         default:
             throw new DataFormatException("Tag type is neither HASH16 nor CUSTOM");
-            
+
         }
     }
-    
+
     public String getTagValueString() throws DataFormatException {
         if (this.tagType == ECTagTypes.EC_TAGTYPE_STRING) {
             return tagValueString;
         } else {
             throw new DataFormatException("Tag type is not STRING");
-        }        
+        }
     }
 
     public void setTagValueString(String tagValueString) throws DataFormatException {
@@ -145,7 +148,15 @@ public class ECTag  {
         default:
             throw new DataFormatException("Tag type is not UINT*");
         }
-                
+    }
+
+    public BigInteger getTagValueUInt128() throws DataFormatException {
+    	switch (tagType) {
+    	case ECTagTypes.EC_TAGTYPE_UINT128:
+    		return tagValueUInt128;
+    	default:
+    		throw new DataFormatException("Tag type is not UINT*");
+    	}
     }
 
     public void setTagValueUInt(long tagValueUInt) throws DataFormatException {
@@ -159,9 +170,22 @@ public class ECTag  {
         default:
             throw new DataFormatException("Tag type is not UINT*");
         }
-
     }
-    
+
+	public void setTagValueUInt(BigInteger tagValueUInt) throws DataFormatException {
+        switch (tagType) {
+        case ECTagTypes.EC_TAGTYPE_UINT8:
+        case ECTagTypes.EC_TAGTYPE_UINT16:
+        case ECTagTypes.EC_TAGTYPE_UINT32:
+        case ECTagTypes.EC_TAGTYPE_UINT64:
+        case ECTagTypes.EC_TAGTYPE_UINT128:
+            this.tagValueUInt128 = tagValueUInt;
+            break;
+        default:
+            throw new DataFormatException("Tag type is not UINT*");
+        }
+	}
+
     public InetSocketAddress getTagValueIPv4() throws DataFormatException {
         if (tagType == ECTagTypes.EC_TAGTYPE_IPV4) {
             return tagValueIPv4;
@@ -211,7 +235,7 @@ public class ECTag  {
         }
 
     }
-    
+
     public void setTagValueDouble(double tagValueDouble) throws DataFormatException {
         if (tagType == ECTagTypes.EC_TAGTYPE_DOUBLE) {
             this.tagValueDouble = tagValueDouble;
@@ -219,7 +243,7 @@ public class ECTag  {
             throw new DataFormatException("Tag type is not DOUBLE");
         }
     }
-    
+
     public double getTagValueDouble() throws DataFormatException {
         if (tagType == ECTagTypes.EC_TAGTYPE_DOUBLE) {
             return tagValueDouble;
@@ -227,7 +251,7 @@ public class ECTag  {
             throw new DataFormatException("Tag type is not DOUBLE");
         }
     }
-    
+
     public int getTagName() {
         return tagName;
     }
@@ -247,6 +271,7 @@ public class ECTag  {
         case ECTagTypes.EC_TAGTYPE_UINT16:
         case ECTagTypes.EC_TAGTYPE_UINT32:
         case ECTagTypes.EC_TAGTYPE_UINT64:
+        case ECTagTypes.EC_TAGTYPE_UINT128:
         case ECTagTypes.EC_TAGTYPE_STRING:
         case ECTagTypes.EC_TAGTYPE_IPV4:
         case ECTagTypes.EC_TAGTYPE_HASH16:
@@ -257,14 +282,14 @@ public class ECTag  {
             throw new DataFormatException("Unknown tag type " + ECUtils.byteArrayToHexString(tagType));
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
     public ArrayList<ECTag> getSubTags() {
         return subTags;
     }
@@ -272,9 +297,9 @@ public class ECTag  {
     public void addSubTag(ECTag subTag) {
         this.subTags.add(subTag);
     }
-    
+
     public ECTag getSubTagByName(short tagName) {
-        if (! subTags.isEmpty()) {            
+        if (! subTags.isEmpty()) {
             Iterator<ECTag> itr = subTags.iterator();
             while(itr.hasNext()) {
                 ECTag tag = itr.next();
@@ -285,9 +310,9 @@ public class ECTag  {
         }
         return null;
     }
-    
+
     public long getLength(boolean withHeader, boolean isUTF8Compressed) throws ECTagParsingException {
-        
+
         //long len = withHeader ? 7 : 0; // ec_tagname_t - uint16, ec_tagtype_t - uint8, ec_taglen_t - uint32
         long len = 0L;
         if (withHeader) {
@@ -298,16 +323,16 @@ public class ECTag  {
                     len += ECUtils.UTF8Length(tagName << 1); // ec_tagname_t
                 } catch (CharacterCodingException e) {
                     throw new ECTagParsingException("Invlid tagName, not UTF-8 encodable: " + tagName, e);
-                } 
+                }
                 len += 1; // ec_tagtype_t
                 try {
                     len += ECUtils.UTF8Length(getLength(false, isUTF8Compressed)); // ec_taglen_t
                 } catch (CharacterCodingException e) {
                     throw new ECTagParsingException("Invlid tag length, not UTF-8 encodable: " + len, e);
-                } 
+                }
             }
         }
-        
+
         switch (tagType) {
         case ECTagTypes.EC_TAGTYPE_CUSTOM:
             if (tagValueCustom != null) {
@@ -341,7 +366,7 @@ public class ECTag  {
             }
             break;
         case ECTagTypes.EC_TAGTYPE_IPV4:
-            len += 4; 
+            len += 4;
             break;
         case ECTagTypes.EC_TAGTYPE_HASH16:
             len += 16;
@@ -349,52 +374,52 @@ public class ECTag  {
         default:
             // Don't need an exception. tagType has been checked in set method
         }
-        
+
         if (! subTags.isEmpty()) {
             if (withHeader)
-                
+
                 if (isUTF8Compressed) {
-                
+
                     try {
                         len += ECUtils.UTF8Length(subTags.size());
                     } catch (CharacterCodingException e) {
                         throw new ECTagParsingException("Invlid tag count, not UTF-8 encodable: " + len, e);
-                    } 
+                    }
                 } else {
                     len += 2;
                 }
-        
+
                 Iterator<ECTag> itr = subTags.iterator();
                 while(itr.hasNext()) {
                     // TBV It seems that packet len is computed as not comrpessed for subtags
                      len += itr.next().getLength(true, isUTF8Compressed);
                 }
 
-            
+
         }
-        
+
         return len;
     }
-    
+
     public long getLength() throws ECTagParsingException {
         return getLength(false, false);
     }
 
 
-    
-    
-    
-    
+
+
+
+
     @Override
     public String toString() {
-        
+
         StringBuffer sbIndent = new StringBuffer("        ");
         for (int i = 0; i < nestingLevel; i++) {
             sbIndent.append("        ");
         }
-        
+
         String indent = sbIndent.toString();
-        
+
         StringBuffer out = new StringBuffer(indent);
         out.append("Tag Name: <" + Integer.toHexString(tagName) + ">\n");
 
@@ -422,6 +447,10 @@ public class ECTag  {
             type = "UINT64";
             value = Long.toString(tagValueUInt);
             break;
+        case ECTagTypes.EC_TAGTYPE_UINT128:
+        	type = "UINT128";
+        	value = tagValueUInt128.toString();
+        	break;
         case ECTagTypes.EC_TAGTYPE_STRING:
             type = "STRING";
             value = tagValueString;
@@ -443,23 +472,20 @@ public class ECTag  {
             value = "";
 
         }
-                
+
         out.append(indent + "Tag Type: <" + type + ">\n");
-        
-        
-        if (! this.subTags.isEmpty()) {            
+
+
+        if (! this.subTags.isEmpty()) {
             out.append(indent + "Subtags (" + subTags.size() + ")\n");
             Iterator<ECTag> itr = subTags.iterator();
             while(itr.hasNext()) {
                 out.append(itr.next().toString());
             }
         }
-        
+
         out.append(indent + "Tag Value: <" + value + ">\n");
         return out.toString();
-    }    
+    }
 
-    
-    
-    
 }

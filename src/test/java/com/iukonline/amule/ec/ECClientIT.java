@@ -39,7 +39,7 @@ import com.iukonline.amule.ec.v204.ECCodesV204;
  * @author gvegetti
  *
  */
-public class ECClientTest {
+public class ECClientIT {
 
 
     final static String SERVER_HOST = "<TEST SERVER HOST HERE>";

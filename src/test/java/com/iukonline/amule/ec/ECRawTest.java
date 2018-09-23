@@ -17,103 +17,133 @@
 
 package com.iukonline.amule.ec;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.*;
+
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.zip.DataFormatException;
 
 import org.junit.Test;
 
 import com.iukonline.amule.ec.exceptions.ECPacketParsingException;
+import com.iukonline.amule.ec.v204.ECCodesV204;
 import com.iukonline.amule.ec.v204.ECRawPacketV204;
 
 public class ECRawTest {
 
+	@Test
+	public void testSalt() throws NoSuchAlgorithmException, UnsupportedEncodingException {
+		long salt = -529551870334727926L;
+		byte[] saltHexBytes = ECUtils.uintToBytes(salt, 8, true);
+		assertThat(ECUtils.byteArrayToHexString(saltHexBytes), equalTo("F8 A6 A7 61 2E 8E 09 0A"));
 
-    @Test public void testSalt() throws NoSuchAlgorithmException, UnsupportedEncodingException {
+		byte[] saltHash = MessageDigest.getInstance("MD5").digest(String.format("%X", salt).getBytes());
+		assertThat(ECUtils.byteArrayToHexString(saltHash), equalTo("1F 00 02 2A B9 69 D5 DE 84 8C 62 C4 7A 2C 53 FB"));
 
-        /*
-        DEBUG: saltString = F8A6A7612E8E090A
-        DEBUG: saltHash = 1f00022ab969d5de848c62c47a2c53fb
-        DEBUG: m_connectionPassword before = 098F6BCD4621D373CADE4E832627B4F6
-        DEBUG: m_connectionPassword after = f0da283ec2405883101ec4b6dc2d3b43
-        */
+		byte[] passwd = MessageDigest.getInstance("MD5").digest(new String("test").getBytes("UTF-8"));
+		assertThat(ECUtils.byteArrayToHexString(passwd), equalTo("09 8F 6B CD 46 21 D3 73 CA DE 4E 83 26 27 B4 F6"));
 
-        long salt = -529551870334727926L;
+		MessageDigest digest = MessageDigest.getInstance("MD5");
 
+		digest.update(ECUtils.byteArrayToHexString(passwd, 16, 0, null).toLowerCase().getBytes());
+		digest.update(ECUtils.byteArrayToHexString(saltHash, 16, 0, null).toLowerCase().getBytes());
+		assertThat(ECUtils.byteArrayToHexString(digest.digest()), equalTo("F0 DA 28 3E C2 40 58 83 10 1E C4 B6 DC 2D 3B 43"));
 
-        byte[] saltHexBytes = ECUtils.uintToBytes(salt, 8, true);
-        System.out.printf("SALT PRINTF: %X\n",  salt);
-        System.out.println("SALT BYTES: " + ECUtils.byteArrayToHexString(saltHexBytes));
+	}
 
-        //byte[] saltHash = MessageDigest.getInstance("MD5").digest(ECUtils.byteArrayToHexString(saltHexBytes, 8, 0, null).getBytes());
-        byte[] saltHash = MessageDigest.getInstance("MD5").digest(String.format("%X", salt).getBytes());
-        System.out.println("SALT HASH: " + ECUtils.byteArrayToHexString(saltHash));
+	@Test
+	public void testTrace() throws Exception {
+		InputStream clientStream = this.getClass().getResourceAsStream("LogonSearch231Client.bin");
+		InputStream serverStream = this.getClass().getResourceAsStream("LogonSearch231Server.bin");
 
-        byte[] passwd = MessageDigest.getInstance("MD5").digest(new String("test").getBytes("UTF-8"));
-        System.out.println("HASH PASSWD: " + ECUtils.byteArrayToHexString(passwd));
+		int requests = 0;
+		while (clientStream.available() > 0) {
+			ECPacket request = ECPacket.readFromStream(clientStream, ECRawPacketV204.class);
+//			System.out.println(request.getEncodedPacket().dump());
+			switch (requests) {
+			case 0:
+				assertRequestLogin(request);
+				break;
+			case 1:
+				assertRequestSignIn(request);
+				break;
+			}
 
+			if (serverStream.available() > 0) {
+				ECPacket response = ECPacket.readFromStream(serverStream, ECRawPacketV204.class);
+//				System.out.println(response.getEncodedPacket().dump());
+				switch (requests) {
+				case 0:
+					assertResponseLogin(response);
+					break;
+				case 1:
+					assertResponseSignIn(response);
+					break;
+				}
+			}
+			requests++;
+		}
 
-        MessageDigest digest = MessageDigest.getInstance("MD5");
+		clientStream.close();
+		serverStream.close();
+	}
 
-        digest.update(ECUtils.byteArrayToHexString(passwd, 16, 0, null).toLowerCase().getBytes());
-        digest.update(ECUtils.byteArrayToHexString(saltHash, 16, 0, null).toLowerCase().getBytes());
-        System.out.println("RESPONSE: " + ECUtils.byteArrayToHexString(digest.digest()));
+	private void assertResponseLogin(ECPacket response) throws DataFormatException {
+		assertFalse(response.isZlibCompressed());
+		assertTrue(response.acceptsUTF8());
+		assertFalse(response.hasId());
+		assertThat(response.getOpCode(), equalTo(ECCodesV204.EC_OP_AUTH_SALT));
+		List<ECTag> tags = response.getTags();
+		assertThat(tags.size(), equalTo(1));
+		ECTag ecTag = tags.get(0);
+		assertThat(ecTag.getTagName(), equalTo(Integer.valueOf(ECCodesV204.EC_TAG_PASSWD_SALT)));
+		assertThat(ecTag.getTagType(), equalTo(ECTagTypes.EC_TAGTYPE_UINT64));
+		assertThat(ecTag.getTagValueUInt(), equalTo(1385283421829075617l));
+		assertTrue(ecTag.getSubTags().isEmpty());
+	}
 
-    }
+	private void assertResponseSignIn(ECPacket response) throws DataFormatException {
+		assertFalse(response.isZlibCompressed());
+		assertTrue(response.acceptsUTF8());
+		assertFalse(response.hasId());
+		assertThat(response.getOpCode(), equalTo(ECCodesV204.EC_OP_AUTH_OK));
+		List<ECTag> tags = response.getTags();
+		assertThat(tags.size(), equalTo(1));
+		ECTag ecTag = tags.get(0);
+		assertThat(ecTag.getTagName(), equalTo(Integer.valueOf(ECCodesV204.EC_TAG_SERVER_VERSION)));
+		assertThat(ecTag.getTagType(), equalTo(ECTagTypes.EC_TAGTYPE_STRING));
+		assertThat(ecTag.getTagValueString(), equalTo("2.3.1 AdunanzA 2012.1b1"));
+		assertTrue(ecTag.getSubTags().isEmpty());
+	}
 
+	private void assertRequestLogin(ECPacket request) {
+		assertFalse(request.isZlibCompressed());
+		assertTrue(request.acceptsUTF8());
+		assertFalse(request.hasId());
+		assertThat(request.getOpCode(), equalTo(ECCodes.EC_OP_AUTH_REQ));
+		assertThat(request.getTags().size(), equalTo(5));
+	}
 
-    @Test
-    public void testTrace() throws IOException, DataFormatException, ECPacketParsingException {
-        File clientFile = new File("test/com/iukonline/amule/ec/test/LogonSearch231Client.bin");
-        File serverFile = new File("test/com/iukonline/amule/ec/test/LogonSearch231Server.bin");
+	private void assertRequestSignIn(ECPacket request) {
+		assertFalse(request.isZlibCompressed());
+		assertTrue(request.acceptsUTF8());
+		assertFalse(request.hasId());
+		assertThat(request.getOpCode(), equalTo(ECCodesV204.EC_OP_AUTH_PASSWD));
+		assertThat(request.getTags().size(), equalTo(1));
+	}
 
-        FileInputStream clientStream = new FileInputStream(clientFile);
-        FileInputStream serverStream = new FileInputStream(serverFile);
-
-        while (clientStream.available() > 0) {
-        //for (int i = 0; i < 5; i++) {
-
-            System.out.println("------------- REQUEST ---------------------");
-            /*
-              ECRawPacket req = new ECRawPacket(clientStream);
-
-            req.parse();
-
-            System.out.println(req.dump());
-
-            */
-
-            ECPacket p = ECPacket.readFromStream(clientStream, ECRawPacketV204.class);
-            System.out.println(p.getEncodedPacket().dump());
-
-
-
-            if (serverStream.available() > 0) {
-                System.out.println("------------- RESPONSE --------------");
-                /*ECRawPacket resp = new ECRawPacket(serverStream);
-                resp.parse();*/
-
-                ECPacket p2 = ECPacket.readFromStream(serverStream, ECRawPacketV204.class);
-                System.out.println(p2.getEncodedPacket().dump());
-
-                // System.out.println(resp.dump());
-
-            }
-        }
-    }
-
-    @Test
-    public void testTags() throws DataFormatException, ECPacketParsingException {
-        ECPacket epReq = new ECPacket();
-        epReq.setOpCode(ECCodes.EC_OP_PARTFILE_SWAP_A4AF_THIS);
-        byte[] hash = { 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf , 0x10};
-        epReq.addTag(new ECTag(ECCodes.EC_TAG_PARTFILE, ECTagTypes.EC_TAGTYPE_HASH16, hash));
-        @SuppressWarnings("unused")
-        ECRawPacket raw = new ECRawPacket(epReq);
-    }
+	@Test
+	public void testTags() throws DataFormatException, ECPacketParsingException {
+		ECPacket epReq = new ECPacket();
+		epReq.setOpCode(ECCodes.EC_OP_PARTFILE_SWAP_A4AF_THIS);
+		byte[] hash = { 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10 };
+		epReq.addTag(new ECTag(ECCodes.EC_TAG_PARTFILE, ECTagTypes.EC_TAGTYPE_HASH16, hash));
+		@SuppressWarnings("unused")
+		ECRawPacket raw = new ECRawPacket(epReq);
+	}
 
 }
