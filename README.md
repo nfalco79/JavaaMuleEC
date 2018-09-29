@@ -1,27 +1,39 @@
 # JavaaMuleEC
+
+[![Build Status](https://travis-ci.org/nfalco79/JavaaMuleEC.svg?branch=master)](https://travis-ci.org/nfalco79/JavaaMuleEC) [![Coverage Status](https://coveralls.io/repos/github/nfalco79/JavaaMuleEC/badge.svg?branch=master)](https://coveralls.io/github/nfalco79/JavaaMuleEC?branch=master)
+
 Java library implementing aMule EC protocol.
 
 This library was basically created for the development of the [Amule Remote](https://play.google.com/store/apps/details?id=com.iukonline.amule.android.amuleremote) Android app. However, it can be used within any Java application.
 
 Project is poorly documented (if documented at all), but I have no time at the moment to set up a proper documentation. Feel free to reach out to iuk@iukonline.com for any clarification.
 
-## Distribution ##
+## Maven
 
-A pom.xml file is available for compiling and publishing to a local Maven repository. Set environment variable IUKONLINE_MVN_REPO_HOME to match local Maven repo. 
+Released versions are available in The Central Repository.
+Just add this artifact to your project:
 
-## Copyright ##
+```xml
+<dependency>
+    <groupId>com.github.nfalco79</groupId>
+    <artifactId>amule-ec</artifactId>
+    <version>{version}</version>
+</dependency>
+```
 
-Copyright (C) 2012 Gianluca Vegetti - iuk@iukonline.com
+However if you want to use the last snapshot version, you have to add the Nexus OSS repository:
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+```xml
+<repository>
+    <id>osshr</id>
+    <name>Nexus OSS repository for snapshots</name>
+    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    <snapshots>
+        <enabled>true</enabled>
+    </snapshots>
+</repository>
+```
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+## License ##
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+This project is licensed under [GPLv3 license](https://spdx.org/licenses/GPL-3.0-or-later).
