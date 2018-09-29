@@ -6,7 +6,7 @@
 	<inceptionYear>2012</inceptionYear>
 	<groupId>com.github.nfalco79</groupId>
 	<artifactId>amule-ec</artifactId>
-	<version>0.6.0</version>
+	<version>0.6.1-SNAPSHOT</version>
 	<developers>
 		<developer>
 			<id>allu77</id>
@@ -22,7 +22,7 @@
 		<url>https://github.com/nfalco79/JavaaMuleEC</url>
 		<connection>scm:git:git@github.com:nfalco79/JavaaMuleEC.git</connection>
 		<developerConnection>scm:git:git@github.com:nfalco79/JavaaMuleEC.git</developerConnection>
-		<tag>amule-ec-0.6.0</tag>
+		<tag>HEAD</tag>
 	</scm>
 	<ciManagement>
 		<system>Travis CI</system>
