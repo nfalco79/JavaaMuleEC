@@ -1,5 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<name>Java aMule EC</name>
 	<url>https://github.com/nfalco79/JavaaMuleEC</url>
@@ -7,7 +6,7 @@
 	<inceptionYear>2012</inceptionYear>
 	<groupId>com.github.nfalco79</groupId>
 	<artifactId>amule-ec</artifactId>
-	<version>0.6.0-SNAPSHOT</version>
+	<version>0.6.0</version>
 	<developers>
 		<developer>
 			<id>allu77</id>
@@ -23,7 +22,7 @@
 		<url>https://github.com/nfalco79/JavaaMuleEC</url>
 		<connection>scm:git:git@github.com:nfalco79/JavaaMuleEC.git</connection>
 		<developerConnection>scm:git:git@github.com:nfalco79/JavaaMuleEC.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>amule-ec-0.6.0</tag>
 	</scm>
 	<ciManagement>
 		<system>Travis CI</system>
